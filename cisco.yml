@@ -1,5 +1,5 @@
 ---
-- name: Execute Cisco Commands from AWX/Tower Survey
+- name: Execute Cisco Commands from AAP Survey
   hosts: all
   gather_facts: false
   # connection: network_cli is usually defined in inventory
