@@ -1,8 +1,8 @@
 ---
-- name: Execute Cisco Commands from AAP Survey
+- name: Execute Cisco Commands from AWX/Tower Survey
   hosts: all
   gather_facts: false
-  # connection: network_cli is usually defined in inventory, but good to note
+  # connection: network_cli is usually defined in inventory
   
   tasks:
     - name: Ensure survey_commands variable is defined
@@ -10,16 +10,24 @@
         msg: "The variable 'survey_commands' is not defined. Please run via Job Template with the survey attached."
       when: survey_commands is not defined
 
+    - name: Parse multiline survey into a clean list of commands
+      ansible.builtin.set_fact:
+        parsed_commands: "{{ survey_commands.split('\n') | map('trim') | select() | list }}"
+
     - name: Execute pasted commands on Cisco IOS device
       cisco.ios.ios_command:
-        # Splits the multiline survey text into a list, removing empty lines
-        commands: "{{ survey_commands.split('\n') | map('trim') | select() | list }}"
+        commands: "{{ parsed_commands }}"
       register: cli_output
 
-    - name: Display the command output
+    - name: Display each command entered alongside its output
       ansible.builtin.debug:
-        msg: "{{ item }}"
-      # Loops through the stdout of each command executed
-      loop: "{{ cli_output.stdout_lines }}"
+        msg: 
+          - "========================================"
+          - "COMMAND EXECUTED: {{ item.0 }}"
+          - "========================================"
+          - "{{ item.1 }}"
+      # The 'zip' filter merges the commands list and the outputs list together
+      loop: "{{ parsed_commands | zip(cli_output.stdout_lines) | list }}"
       loop_control:
-        label: "Output"
+        # This labels the AWX UI task with the specific command name rather than hiding it
+        label: "{{ item.0 }}"
