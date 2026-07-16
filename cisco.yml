@@ -1,0 +1,25 @@
+---
+- name: Execute Cisco Commands from AAP Survey
+  hosts: all
+  gather_facts: false
+  # connection: network_cli is usually defined in inventory, but good to note
+  
+  tasks:
+    - name: Ensure survey_commands variable is defined
+      ansible.builtin.fail:
+        msg: "The variable 'survey_commands' is not defined. Please run via Job Template with the survey attached."
+      when: survey_commands is not defined
+
+    - name: Execute pasted commands on Cisco IOS device
+      cisco.ios.ios_command:
+        # Splits the multiline survey text into a list, removing empty lines
+        commands: "{{ survey_commands.split('\n') | map('trim') | select() | list }}"
+      register: cli_output
+
+    - name: Display the command output
+      ansible.builtin.debug:
+        msg: "{{ item }}"
+      # Loops through the stdout of each command executed
+      loop: "{{ cli_output.stdout_lines }}"
+      loop_control:
+        label: "Output"
